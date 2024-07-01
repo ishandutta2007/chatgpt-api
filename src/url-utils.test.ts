@@ -17,15 +17,18 @@ describe('normalizeUrl', () => {
     expect(normalizeUrl('https://google.com/abc/123//')).toBe(
       'https://google.com/abc/123'
     )
+    expect(normalizeUrl('//google.com')).toBe('https://google.com')
+    expect(normalizeUrl('google.com')).toBe('https://google.com')
+    expect(normalizeUrl('abc.foo.com')).toBe('https://abc.foo.com')
   })
 
   test('invalid urls', async () => {
-    expect(normalizeUrl('/foo')).toBe(null)
-    expect(normalizeUrl('/foo/bar/baz')).toBe(null)
-    expect(normalizeUrl('://foo.com')).toBe(null)
-    expect(normalizeUrl('foo')).toBe(null)
-    expect(normalizeUrl('')).toBe(null)
-    expect(normalizeUrl(undefined as unknown as string)).toBe(null)
-    expect(normalizeUrl(null as unknown as string)).toBe(null)
+    expect(normalizeUrl('/foo')).toBe(undefined)
+    expect(normalizeUrl('/foo/bar/baz')).toBe(undefined)
+    expect(normalizeUrl('://foo.com')).toBe(undefined)
+    expect(normalizeUrl('foo')).toBe(undefined)
+    expect(normalizeUrl('')).toBe(undefined)
+    expect(normalizeUrl(undefined as unknown as string)).toBe(undefined)
+    expect(normalizeUrl(null as unknown as string)).toBe(undefined)
   })
 })

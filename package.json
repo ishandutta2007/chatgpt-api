@@ -1,6 +1,6 @@
 {
   "name": "@agentic/stdlib",
-  "version": "6.1.1",
+  "version": "6.2.4",
   "description": "AI function stdlib that works with any LLM and TypeScript AI SDK.",
   "author": "Travis Fischer <travis@transitivebullsh.it>",
   "license": "MIT",
@@ -72,6 +72,7 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "build": "tsup",
+    "dev": "tsup --watch",
     "clean": "del dist",
     "prebuild": "run-s clean",
     "predev": "run-s clean",
@@ -90,45 +91,45 @@
     "hash-object": "^5.0.1",
     "is-relative-url": "^4.0.0",
     "jsonrepair": "^3.6.1",
-    "ky": "^1.2.4",
+    "ky": "^1.4.0",
     "normalize-url": "^8.0.1",
     "p-map": "^7.0.2",
     "p-throttle": "^6.1.0",
     "quick-lru": "^7.0.0",
-    "type-fest": "^4.20.0",
+    "type-fest": "^4.20.1",
     "zod": "^3.23.3",
-    "zod-to-json-schema": "^3.23.0"
+    "zod-to-json-schema": "^3.23.1"
   },
   "devDependencies": {
-    "@aws-sdk/client-sso-oidc": "^3.592.0",
-    "@browserbasehq/sdk": "^1.3.1",
+    "@aws-sdk/client-sso-oidc": "^3.606.0",
+    "@browserbasehq/sdk": "^1.4.2",
     "@dexaai/dexter": "^2.0.3",
-    "@e2b/code-interpreter": "^0.0.7",
-    "@fisch0920/eslint-config": "^1.3.3",
-    "@genkit-ai/ai": "^0.5.2",
-    "@langchain/core": "^0.2.6",
-    "@nangohq/node": "^0.39.33",
+    "@e2b/code-interpreter": "^0.0.8",
+    "@fisch0920/eslint-config": "^1.4.0",
+    "@genkit-ai/ai": "^0.5.4",
+    "@langchain/core": "^0.2.11",
+    "@nangohq/node": "^0.40.7",
     "@total-typescript/ts-reset": "^0.5.1",
-    "@types/node": "^20.14.2",
-    "ai": "^3.1.30",
+    "@types/node": "^20.14.9",
+    "ai": "^3.2.15",
     "del-cli": "^5.1.0",
     "dotenv": "^16.4.5",
     "eslint": "^8.57.0",
-    "expr-eval": "^2.0.2",
     "husky": "^9.0.11",
-    "lint-staged": "^15.2.5",
-    "llamaindex": "^0.3.16",
-    "np": "^10.0.5",
+    "lint-staged": "^15.2.7",
+    "llamaindex": "^0.4.6",
+    "mathjs": "^13.0.1",
+    "np": "^10.0.6",
     "npm-run-all2": "^6.2.0",
     "only-allow": "^1.2.1",
     "openai-fetch": "^2.0.3",
-    "prettier": "^3.3.1",
+    "prettier": "^3.3.2",
     "restore-cursor": "^5.0.0",
     "ts-node": "^10.9.2",
     "tsup": "^8.1.0",
-    "tsx": "^4.14.1",
+    "tsx": "^4.16.0",
     "twitter-api-sdk": "^1.2.1",
-    "typescript": "^5.4.5",
+    "typescript": "^5.5.2",
     "vitest": "2.0.0-beta.3"
   },
   "peerDependencies": {
@@ -138,8 +139,8 @@
     "@langchain/core": "^0.2.6",
     "@nangohq/node": "^0.39.33",
     "ai": "^3.1.30",
-    "expr-eval": "^2.0.2",
     "llamaindex": "^0.3.16",
+    "mathjs": "^13.0.0",
     "twitter-api-sdk": "^1.2.1"
   },
   "peerDependenciesMeta": {
@@ -161,10 +162,10 @@
     "ai": {
       "optional": true
     },
-    "expr-eval": {
+    "llamaindex": {
       "optional": true
     },
-    "llamaindex": {
+    "mathjs": {
       "optional": true
     },
     "twitter-api-sdk": {
@@ -179,7 +180,7 @@
   },
   "pnpm": {
     "overrides": {
-      "esbuild": "~0.21.4"
+      "esbuild": "~0.21.5"
     }
   }
 }

@@ -1,9 +1,10 @@
+import type { Simplify } from 'type-fest'
 import defaultKy, { type KyInstance } from 'ky'
 import pThrottle from 'p-throttle'
 import { z } from 'zod'
 
 import { aiFunction, AIFunctionsProvider } from '../fns.js'
-import { assert, getEnv, throttleKy } from '../utils.js'
+import { assert, getEnv, sanitizeSearchParams, throttleKy } from '../utils.js'
 
 // All proxycurl types are auto-generated from their openapi spec
 export namespace proxycurl {
@@ -25,50 +26,68 @@ export namespace proxycurl {
   ])
   export type CompanyType = z.infer<typeof CompanyTypeSchema>
 
+  export const OptionalFieldSchema = z.enum(['exclude', 'include']).optional()
+  export type OptionalField = z.infer<typeof OptionalFieldSchema>
+
+  export const OptionalEnrichFieldSchema = z.enum(['skip', 'enrich']).optional()
+  export type OptionalEnrichField = z.infer<typeof OptionalEnrichFieldSchema>
+
+  export const UseCacheSchema = z.enum(['if-present', 'if-recent']).optional()
+  export type UseCache = z.infer<typeof UseCacheSchema>
+
+  export const FallbackToCacheSchema = z.enum(['on-error', 'never']).optional()
+  export type FallbackToCache = z.infer<typeof FallbackToCacheSchema>
+
   export const CompanyProfileEndpointParamsQueryClassSchema = z.object({
-    acquisitions: z.string().optional(),
-    categories: z.string().optional(),
-    exit_data: z.string().optional(),
-    extra: z.string().optional(),
-    fallback_to_cache: z.string().optional(),
-    funding_data: z.string().optional(),
-    resolve_numeric_id: z.string().optional(),
     url: z.string(),
-    use_cache: z.string().optional()
+    acquisitions: OptionalFieldSchema,
+    categories: OptionalFieldSchema,
+    exit_data: OptionalFieldSchema,
+    extra: OptionalFieldSchema,
+    funding_data: OptionalFieldSchema,
+    resolve_numeric_id: z.boolean().optional(),
+    fallback_to_cache: FallbackToCacheSchema,
+    use_cache: UseCacheSchema
   })
   export type CompanyProfileEndpointParamsQueryClass = z.infer<
     typeof CompanyProfileEndpointParamsQueryClassSchema
   >
 
+  /**
+   * Requires one of:
+   * - `facebook_profile_url`
+   * - `linkedin_profile_url`
+   * - `twitter_profile_url`
+   */
   export const PersonProfileEndpointParamsQueryClassSchema = z.object({
-    extra: z.string().optional(),
-    facebook_profile_id: z.string().optional(),
     facebook_profile_url: z.string().optional(),
-    fallback_to_cache: z.string().optional(),
-    github_profile_id: z.string().optional(),
-    inferred_salary: z.string().optional(),
     linkedin_profile_url: z.string().optional(),
-    personal_contact_number: z.string().optional(),
-    personal_email: z.string().optional(),
-    skills: z.string().optional(),
-    twitter_profile_id: z.string().optional(),
     twitter_profile_url: z.string().optional(),
-    use_cache: z.string().optional()
+    facebook_profile_id: OptionalFieldSchema,
+    twitter_profile_id: OptionalFieldSchema,
+    extra: OptionalFieldSchema,
+    github_profile_id: OptionalFieldSchema,
+    inferred_salary: OptionalFieldSchema,
+    personal_contact_number: OptionalFieldSchema,
+    personal_email: OptionalFieldSchema,
+    skills: OptionalFieldSchema,
+    fallback_to_cache: FallbackToCacheSchema,
+    use_cache: UseCacheSchema
   })
-  export type PersonProfileEndpointParamsQueryClass = z.infer<
-    typeof PersonProfileEndpointParamsQueryClassSchema
+  export type PersonProfileEndpointParamsQueryClass = Simplify<
+    z.infer<typeof PersonProfileEndpointParamsQueryClassSchema>
   >
 
   export const PersonLookupEndpointParamsQueryClassSchema = z.object({
     company_domain: z
       .string()
       .describe('The domain URL of the company the person works at'),
-    enrich_profile: z.string().optional(),
     first_name: z.string(),
     last_name: z.string().optional(),
     location: z.string().optional(),
     similarity_checks: z.string().optional(),
-    title: z.string().optional()
+    title: z.string().optional(),
+    enrich_profile: OptionalEnrichFieldSchema
   })
   export type PersonLookupEndpointParamsQueryClass = z.infer<
     typeof PersonLookupEndpointParamsQueryClassSchema
@@ -77,7 +96,7 @@ export namespace proxycurl {
   export const RoleLookupEndpointParamsQueryClassSchema = z.object({
     company_name: z.string(),
     role: z.string(),
-    enrich_profile: z.string().optional()
+    enrich_profile: OptionalEnrichFieldSchema
   })
   export type RoleLookupEndpointParamsQueryClass = z.infer<
     typeof RoleLookupEndpointParamsQueryClassSchema
@@ -87,7 +106,7 @@ export namespace proxycurl {
     company_domain: z.string().optional(),
     company_location: z.string().optional(),
     company_name: z.string().optional(),
-    enrich_profile: z.string().optional()
+    enrich_profile: OptionalEnrichFieldSchema
   })
   export type CompanyLookupEndpointParamsQueryClass = z.infer<
     typeof CompanyLookupEndpointParamsQueryClassSchema
@@ -95,7 +114,7 @@ export namespace proxycurl {
 
   export const ReverseEmailLookupEndpointParamsQueryClassSchema = z.object({
     email: z.string(),
-    enrich_profile: z.string().optional(),
+    enrich_profile: OptionalEnrichFieldSchema,
     lookup_depth: z.string().optional()
   })
   export type ReverseEmailLookupEndpointParamsQueryClass = z.infer<
@@ -1916,6 +1935,7 @@ export namespace proxycurl {
   export type SearchResult = z.infer<typeof SearchResultSchema>
 
   export const ResultProfileSchema = z.object({
+    linkedin_url: z.string().optional(),
     acquisitions: PurpleAcquisitionSchema.optional(),
     affiliated_companies: z.array(PurpleAffiliatedCompanySchema).optional(),
     background_cover_image_url: z.string().optional(),
@@ -1944,7 +1964,12 @@ export namespace proxycurl {
     updates: z.array(PurpleCompanyUpdateSchema).optional(),
     website: z.string().optional()
   })
-  export type ResultProfile = z.infer<typeof ResultProfileSchema>
+  export type CompanyProfile = z.infer<typeof ResultProfileSchema>
+  export type ResolvedCompanyProfile = {
+    url: string
+    last_updated: string
+    profile: CompanyProfile
+  }
 
   export const CompanyUrlEnrichResultProfileSchema = z.object({
     acquisitions: FluffyAcquisitionSchema.optional(),
@@ -2027,11 +2052,13 @@ export class ProxycurlClient extends AIFunctionsProvider {
     apiBaseUrl = getEnv('PROXYCURL_API_BASE_URL') ??
       'https://nubela.co/proxycurl',
     throttle = true,
+    timeoutMs = 30_000,
     ky = defaultKy
   }: {
     apiKey?: string
     apiBaseUrl?: string
     throttle?: boolean
+    timeoutMs?: number
     ky?: KyInstance
   } = {}) {
     assert(
@@ -2051,6 +2078,7 @@ export class ProxycurlClient extends AIFunctionsProvider {
 
     this.ky = throttledKy.extend({
       prefixUrl: apiBaseUrl,
+      timeout: timeoutMs,
       headers: {
         Authorization: `Bearer ${apiKey}`
       }
@@ -2065,12 +2093,22 @@ export class ProxycurlClient extends AIFunctionsProvider {
   })
   async getLinkedInCompany(
     opts: proxycurl.CompanyProfileEndpointParamsQueryClass
-  ) {
-    return this.ky
+  ): Promise<proxycurl.CompanyProfile> {
+    const res = await this.ky
       .get('api/linkedin/company', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams({
+          funding_data: 'include',
+          exit_data: 'include',
+          extra_data: 'include',
+          ...opts
+        })
       })
-      .json<proxycurl.ResultProfile>()
+      .json<proxycurl.CompanyProfile>()
+
+    return {
+      linkedin_url: opts.url,
+      ...res
+    }
   }
 
   @aiFunction({
@@ -2084,7 +2122,7 @@ export class ProxycurlClient extends AIFunctionsProvider {
   ) {
     return this.ky
       .get('api/v2/linkedin', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams(opts)
       })
       .json<proxycurl.PublicPerson>()
   }
@@ -2100,7 +2138,10 @@ export class ProxycurlClient extends AIFunctionsProvider {
   ) {
     return this.ky
       .get('api/linkedin/profile/resolve', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams({
+          enrich_profile: 'enrich',
+          ...opts
+        })
       })
       .json<proxycurl.PublicPerson>()
   }
@@ -2116,7 +2157,10 @@ export class ProxycurlClient extends AIFunctionsProvider {
   ) {
     return this.ky
       .get('api/linkedin/profile/resolve/email', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams({
+          enrich_profile: 'enrich',
+          ...opts
+        })
       })
       .json<proxycurl.ReverseEmailUrlEnrichResult>()
   }
@@ -2132,7 +2176,10 @@ export class ProxycurlClient extends AIFunctionsProvider {
   ) {
     return this.ky
       .get('api/find/company/role/', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams({
+          enrich_profile: 'enrich',
+          ...opts
+        })
       })
       .json<proxycurl.PublicPerson>()
   }
@@ -2145,12 +2192,20 @@ export class ProxycurlClient extends AIFunctionsProvider {
   })
   async resolveLinkedInCompany(
     opts: proxycurl.CompanyLookupEndpointParamsQueryClass
-  ) {
-    return this.ky
+  ): Promise<proxycurl.CompanyProfile> {
+    const res = await this.ky
       .get('api/linkedin/company/resolve', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams({
+          enrich_profile: 'enrich',
+          ...opts
+        })
       })
-      .json<proxycurl.ResultProfile>()
+      .json<proxycurl.ResolvedCompanyProfile>()
+
+    return {
+      linkedin_url: res.url,
+      ...res.profile
+    }
   }
 
   @aiFunction({
@@ -2162,7 +2217,7 @@ export class ProxycurlClient extends AIFunctionsProvider {
   async searchCompanies(opts: proxycurl.CompanySearchEndpointParamsQueryClass) {
     return this.ky
       .get('api/v2/search/company', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams(opts)
       })
       .json<proxycurl.CompanySearchResult>()
   }
@@ -2176,7 +2231,7 @@ export class ProxycurlClient extends AIFunctionsProvider {
   async searchPeople(opts: proxycurl.PersonSearchEndpointParamsQueryClass) {
     return this.ky
       .get('api/v2/search/person/', {
-        searchParams: { ...opts }
+        searchParams: sanitizeSearchParams(opts)
       })
       .json<proxycurl.PersonSearchResult>()
   }

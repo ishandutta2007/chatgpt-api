@@ -168,7 +168,7 @@ export namespace perigon {
       'Labels to filter by, could be "Opinion", "Paid-news", "Non-news", etc. If multiple parameters are passed, they will be applied as OR operations.'
     ),
     excludeLabel: z
-      .union([ArticleLabelSchema, z.literal('Low Content')])
+      .array(z.union([ArticleLabelSchema, z.literal('Low Content')]))
       .optional()
       .describe(
         'Exclude results that include specific labels ("Opinion", "Non-news", "Paid News", etc.). You can filter multiple by repeating the parameter.'
@@ -684,6 +684,7 @@ export class PerigonClient extends AIFunctionsProvider {
     return this.ky
       .get('all', {
         searchParams: sanitizeSearchParams({
+          sortBy: 'relevance',
           ...opts,
           apiKey: this.apiKey,
           size: Math.max(
@@ -723,6 +724,7 @@ export class PerigonClient extends AIFunctionsProvider {
     return this.ky
       .get('stories/all', {
         searchParams: sanitizeSearchParams({
+          sortBy: 'relevance',
           ...opts,
           apiKey: this.apiKey,
           size: Math.max(

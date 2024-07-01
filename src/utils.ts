@@ -67,6 +67,29 @@ export function pruneNullOrUndefined<T extends Record<string, any>>(
   ) as NonNullable<T>
 }
 
+export function pruneNullOrUndefinedDeep<T extends Record<string, any>>(
+  obj: T
+): NonNullable<{ [K in keyof T]: Exclude<T[K], undefined | null> }> {
+  if (!obj || Array.isArray(obj) || typeof obj !== 'object') return obj
+
+  return Object.fromEntries(
+    Object.entries(obj)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) =>
+        Array.isArray(value)
+          ? [
+              key,
+              value
+                .filter((v) => v !== undefined && v !== null)
+                .map(pruneNullOrUndefinedDeep as any)
+            ]
+          : typeof value === 'object'
+            ? [key, pruneNullOrUndefinedDeep(value)]
+            : [key, value]
+      )
+  ) as NonNullable<T>
+}
+
 export function getEnv(name: string): string | undefined {
   try {
     return typeof process !== 'undefined'
@@ -106,24 +129,39 @@ export function throttleKy(
  * that correctly handles arrays of values as repeated keys.
  */
 export function sanitizeSearchParams(
-  searchParams: Record<
-    string,
-    string | number | boolean | string[] | number[] | boolean[] | undefined
-  >
+  searchParams:
+    | Record<
+        string,
+        string | number | boolean | string[] | number[] | boolean[] | undefined
+      >
+    | object,
+  { csv = false }: { csv?: boolean } = {}
 ): URLSearchParams {
-  return new URLSearchParams(
-    Object.entries(searchParams).flatMap(([key, value]) => {
-      if (key === undefined || value === undefined) {
-        return []
-      }
+  const entries = Object.entries(searchParams).flatMap(([key, value]) => {
+    if (key === undefined || value === undefined) {
+      return []
+    }
 
-      if (Array.isArray(value)) {
-        return value.map((v) => [key, String(v)])
-      }
+    if (Array.isArray(value)) {
+      return value.map((v) => [key, String(v)])
+    }
 
-      return [[key, String(value)]]
-    }) as [string, string][]
+    return [[key, String(value)]]
+  }) as [string, string][]
+
+  if (!csv) {
+    return new URLSearchParams(entries)
+  }
+
+  const csvEntries = entries.reduce(
+    (acc, [key, value]) => ({
+      ...acc,
+      [key]: acc[key] ? `${acc[key]},${value}` : value
+    }),
+    {} as any
   )
+
+  return new URLSearchParams(csvEntries)
 }
 
 /**
@@ -157,4 +195,16 @@ export function hashObject(
   options?: HashObjectOptions
 ): string {
   return hashObjectImpl(object, { algorithm: 'sha256', ...options })
+}
+
+export function isAIFunction(obj: any): obj is types.AIFunction {
+  if (!obj) return false
+  if (typeof obj !== 'function') return false
+  if (!obj.inputSchema) return false
+  if (!obj.parseInput) return false
+  if (!obj.spec) return false
+  if (!obj.impl) return false
+  if (!obj.spec.name || typeof obj.spec.name !== 'string') return false
+
+  return true
 }
